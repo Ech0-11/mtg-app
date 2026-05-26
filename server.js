@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { WebSocketServer } = require("ws");
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 function defaultPlayerMana() {
   return {
@@ -15,8 +15,8 @@ function defaultPlayerMana() {
 function defaultState() {
   return {
     players: [
-      { id: 0, name: "Player 1", life: 40, poison: 0, commandTax: [0,0], commanderDamage: [0], mana: defaultPlayerMana() },
-      { id: 1, name: "Player 2", life: 40, poison: 0, commandTax: [0,0], commanderDamage: [0], mana: defaultPlayerMana() },
+      { id: 0, name: "Player 1", life: 40, poison: 0, commandTax: [0, 0], commanderDamage: [0], mana: defaultPlayerMana() },
+      { id: 1, name: "Player 2", life: 40, poison: 0, commandTax: [0, 0], commanderDamage: [0], mana: defaultPlayerMana() },
     ],
     turn: 1,
     activePlayer: 0,
