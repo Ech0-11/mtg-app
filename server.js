@@ -1,9 +1,30 @@
 const http = require("http");
+const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const { WebSocketServer } = require("ws");
+const { URL } = require("url");
+
+// ── Load .env file (no external deps) ───────────────────
+const envPath = path.join(__dirname, ".env");
+if (fs.existsSync(envPath)) {
+  fs.readFileSync(envPath, "utf-8").split("\n").forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) return;
+    const idx = trimmed.indexOf("=");
+    if (idx > 0) {
+      const key = trimmed.slice(0, idx).trim();
+      const val = trimmed.slice(idx + 1).trim();
+      if (!process.env[key]) process.env[key] = val;
+    }
+  });
+}
 
 const PORT = process.env.PORT || 3001;
+const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL || "";
+
+// ── Rate limiting for suggestions (IP -> timestamp) ─────
+const suggestionCooldowns = new Map();
 
 function defaultPlayerMana() {
   return {
@@ -31,7 +52,95 @@ let gameState = defaultState();
 const cookieMap = {};
 const clients = new Set();
 
+// ── Send to Discord webhook ─────────────────────────────
+function sendToDiscord(text) {
+  if (!DISCORD_WEBHOOK) {
+    console.warn("No DISCORD_WEBHOOK_URL set — skipping.");
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      embeds: [{
+        title: "💡 New Suggestion",
+        description: text,
+        color: 0xc9a84c,
+        timestamp: new Date().toISOString(),
+        footer: { text: "MTG Commander Tracker" },
+      }],
+    });
+    const parsed = new URL(DISCORD_WEBHOOK);
+    const options = {
+      hostname: parsed.hostname,
+      path: parsed.pathname + parsed.search,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+    };
+    const req = https.request(options, (r) => {
+      let data = "";
+      r.on("data", (d) => (data += d));
+      r.on("end", () => (r.statusCode < 300 ? resolve(data) : reject(new Error(`Discord ${r.statusCode}: ${data}`))));
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+// ── Save suggestion locally as backup ───────────────────
+function saveSuggestionLocally(text, ip) {
+  const file = path.join(__dirname, "suggestions.json");
+  let list = [];
+  try { list = JSON.parse(fs.readFileSync(file, "utf-8")); } catch {}
+  list.push({ text, ip, timestamp: new Date().toISOString() });
+  fs.writeFileSync(file, JSON.stringify(list, null, 2));
+}
+
 const server = http.createServer((req, res) => {
+  // ── API: Suggestion endpoint ──────────────────────────
+  if (req.method === "POST" && req.url === "/api/suggestion") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", async () => {
+      try {
+        const { suggestion } = JSON.parse(body);
+        const text = (suggestion || "").trim();
+
+        if (!text || text.length < 3) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: "Suggestion is too short." }));
+        }
+        if (text.length > 1000) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: "Suggestion is too long (max 1000 chars)." }));
+        }
+
+        // Rate limit: 1 suggestion per 60 seconds per IP
+        const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+        const now = Date.now();
+        const last = suggestionCooldowns.get(ip) || 0;
+        if (now - last < 60_000) {
+          const wait = Math.ceil((60_000 - (now - last)) / 1000);
+          res.writeHead(429, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: `Please wait ${wait}s before submitting another suggestion.` }));
+        }
+        suggestionCooldowns.set(ip, now);
+
+        // Save locally + send to Discord
+        saveSuggestionLocally(text, ip);
+        await sendToDiscord(text);
+
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        console.error("Suggestion error:", e);
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Failed to submit suggestion." }));
+      }
+    });
+    return;
+  }
+
+  // ── Static files ──────────────────────────────────────
   let filePath = path.join(__dirname, "public", req.url === "/" ? "index.html" : req.url);
   const ext = path.extname(filePath);
   const mime = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css" };

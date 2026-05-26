@@ -140,6 +140,30 @@ body { background: var(--bg); color: var(--text); font-family: 'Crimson Pro', Ge
 .total-num { font-family: 'Cinzel', serif; font-size: 20px; color: var(--text); }
 .total-lbl { font-family: 'Cinzel', serif; font-size: 8px; color: var(--dim); letter-spacing: 1px; }
 
+/* ── SUGGEST TAB ── */
+.suggest-page { padding: 16px 12px; display: flex; flex-direction: column; gap: 14px; }
+.suggest-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.suggest-card-head { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.suggest-icon { font-size: 18px; }
+.suggest-card-title { font-family: 'Cinzel', serif; font-size: 12px; color: var(--gold); letter-spacing: 2px; }
+.suggest-card-body { padding: 14px; }
+.suggest-desc { font-family: 'Crimson Pro', serif; font-size: 14px; color: var(--dim); margin-bottom: 12px; line-height: 1.5; }
+.suggest-textarea { width: 100%; min-height: 100px; max-height: 200px; padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Crimson Pro', serif; font-size: 14px; resize: vertical; outline: none; transition: border-color 0.2s; }
+.suggest-textarea:focus { border-color: var(--gold-dark); }
+.suggest-textarea::placeholder { color: rgba(138,128,112,0.5); }
+.suggest-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.suggest-charcount { font-family: 'Cinzel', serif; font-size: 9px; color: var(--dim); letter-spacing: 1px; }
+.suggest-charcount.over { color: var(--red); }
+.suggest-submit { padding: 10px 32px; background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.35); color: var(--gold); border-radius: 8px; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px; cursor: pointer; transition: all 0.2s; }
+.suggest-submit:hover { background: rgba(201,168,76,0.18); }
+.suggest-submit:active { transform: scale(0.95); }
+.suggest-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.suggest-feedback { margin-top: 10px; padding: 10px 14px; border-radius: 8px; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px; text-align: center; display: none; animation: fadeSlide 0.3s ease; }
+.suggest-feedback.ok { display: block; background: rgba(39,174,96,0.1); border: 1px solid rgba(39,174,96,0.25); color: var(--green); }
+.suggest-feedback.err { display: block; background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.25); color: var(--red); }
+@keyframes fadeSlide { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+.suggest-cooldown { font-family: 'Crimson Pro', serif; font-size: 12px; color: var(--dim); text-align: center; padding: 6px 0 0; }
+
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -167,6 +191,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Crimson Pro', Ge
 <div class="tabs">
   <div class="tab on" onclick="switchTab('game')">⚔ GAME</div>
   <div class="tab" onclick="switchTab('mana')">🔮 MANA</div>
+  <div class="tab" onclick="switchTab('suggest')">💡 SUGGEST</div>
 </div>
 
 <div id="page-game" class="page on">
@@ -193,6 +218,27 @@ body { background: var(--bg); color: var(--text); font-family: 'Crimson Pro', Ge
 
 <div id="page-mana" class="page">
   <div class="mana-page" id="manaPage"></div>
+</div>
+
+<div id="page-suggest" class="page">
+  <div class="suggest-page">
+    <div class="suggest-card">
+      <div class="suggest-card-head">
+        <span class="suggest-icon">💡</span>
+        <span class="suggest-card-title">SEND A SUGGESTION</span>
+      </div>
+      <div class="suggest-card-body">
+        <div class="suggest-desc">Got an idea for a new feature, found a bug, or want something changed? Drop it here — it'll be sent straight to the dev via Discord.</div>
+        <textarea id="suggestBox" class="suggest-textarea" placeholder="Your suggestion…" maxlength="1000"></textarea>
+        <div class="suggest-meta">
+          <span id="suggestCount" class="suggest-charcount">0 / 1000</span>
+          <button id="suggestBtn" class="suggest-submit" onclick="submitSuggestion()">⚡ SEND</button>
+        </div>
+        <div id="suggestFeedback" class="suggest-feedback"></div>
+        <div id="suggestCooldown" class="suggest-cooldown"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -223,11 +269,11 @@ function setMe(id) {
 }
 
 // ── TAB SWITCHING ──
+const TAB_NAMES = ['game','mana','suggest'];
 function switchTab(t) {
   currentTab = t;
-  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('on', ['game','mana'][i] === t));
-  document.getElementById('page-game').classList.toggle('on', t === 'game');
-  document.getElementById('page-mana').classList.toggle('on', t === 'mana');
+  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('on', TAB_NAMES[i] === t));
+  TAB_NAMES.forEach(name => document.getElementById('page-' + name).classList.toggle('on', name === t));
 }
 
 // ── WS ──
@@ -422,6 +468,80 @@ function renderMana() {
 function roll(sides) { send({ type:'ROLL_DICE', sides, playerId: myPlayer }); }
 function nextTurn() { send({ type:'NEXT_TURN' }); }
 function resetGame() { if (confirm('Reset the entire game?')) send({ type:'RESET' }); }
+
+// ── SUGGESTION ──
+let suggestCooldownEnd = 0;
+const suggestBox = document.getElementById('suggestBox');
+const suggestCount = document.getElementById('suggestCount');
+const suggestBtn = document.getElementById('suggestBtn');
+const suggestFeedback = document.getElementById('suggestFeedback');
+const suggestCooldown = document.getElementById('suggestCooldown');
+
+suggestBox.addEventListener('input', () => {
+  const len = suggestBox.value.length;
+  suggestCount.textContent = `${len} / 1000`;
+  suggestCount.classList.toggle('over', len > 1000);
+});
+
+async function submitSuggestion() {
+  const text = suggestBox.value.trim();
+  if (!text || text.length < 3) return showSuggestFeedback('err', 'Too short — write at least 3 characters.');
+  if (text.length > 1000) return showSuggestFeedback('err', 'Too long — max 1000 characters.');
+
+  const now = Date.now();
+  if (now < suggestCooldownEnd) {
+    const wait = Math.ceil((suggestCooldownEnd - now) / 1000);
+    return showSuggestFeedback('err', `Please wait ${wait}s before sending another.`);
+  }
+
+  suggestBtn.disabled = true;
+  suggestBtn.textContent = '⏳ SENDING…';
+  suggestFeedback.className = 'suggest-feedback';
+
+  try {
+    const res = await fetch('/api/suggestion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ suggestion: text }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showSuggestFeedback('ok', '✦ Suggestion sent — thank you!');
+      suggestBox.value = '';
+      suggestCount.textContent = '0 / 1000';
+      suggestCooldownEnd = Date.now() + 60_000;
+      startCooldownTimer();
+    } else {
+      showSuggestFeedback('err', data.error || 'Something went wrong.');
+      if (res.status === 429) {
+        const secs = parseInt((data.error || '').match(/(\d+)s/)?.[1] || '60', 10);
+        suggestCooldownEnd = Date.now() + secs * 1000;
+        startCooldownTimer();
+      }
+    }
+  } catch {
+    showSuggestFeedback('err', 'Network error — are you connected?');
+  } finally {
+    suggestBtn.disabled = false;
+    suggestBtn.textContent = '⚡ SEND';
+  }
+}
+
+function showSuggestFeedback(type, msg) {
+  suggestFeedback.className = 'suggest-feedback ' + type;
+  suggestFeedback.textContent = msg;
+  setTimeout(() => { suggestFeedback.className = 'suggest-feedback'; }, 5000);
+}
+
+function startCooldownTimer() {
+  const tick = () => {
+    const remain = Math.ceil((suggestCooldownEnd - Date.now()) / 1000);
+    if (remain <= 0) { suggestCooldown.textContent = ''; return; }
+    suggestCooldown.textContent = `⏱ You can send again in ${remain}s`;
+    setTimeout(tick, 1000);
+  };
+  tick();
+}
 
 connect();
 </script>
