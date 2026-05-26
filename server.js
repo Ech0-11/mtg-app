@@ -22,6 +22,7 @@ if (fs.existsSync(envPath)) {
 
 const PORT = process.env.PORT || 3001;
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL || "";
+const PROXY_FEEDBACK_URL = process.env.PROXY_FEEDBACK_URL || "";
 
 // ── Rate limiting for suggestions (IP -> timestamp) ─────
 const suggestionCooldowns = new Map();
@@ -52,38 +53,63 @@ let gameState = defaultState();
 const cookieMap = {};
 const clients = new Set();
 
-// ── Send to Discord webhook ─────────────────────────────
-function sendToDiscord(text) {
-  if (!DISCORD_WEBHOOK) {
-    console.warn("No DISCORD_WEBHOOK_URL set — skipping.");
+// ── Send Suggestion (Direct or via Proxy) ───────────────
+function sendSuggestionRemote(text, ip) {
+  if (PROXY_FEEDBACK_URL) {
+    return new Promise((resolve, reject) => {
+      const body = JSON.stringify({ suggestion: text });
+      const parsed = new URL(PROXY_FEEDBACK_URL);
+      const options = {
+        hostname: parsed.hostname,
+        port: parsed.port,
+        path: parsed.pathname + parsed.search,
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json", 
+          "Content-Length": Buffer.byteLength(body),
+          "X-Forwarded-For": ip 
+        },
+      };
+      const req = (parsed.protocol === "https:" ? https : http).request(options, (r) => {
+        let data = "";
+        r.on("data", (d) => (data += d));
+        r.on("end", () => (r.statusCode < 300 ? resolve(data) : reject(new Error(`Proxy ${r.statusCode}: ${data}`))));
+      });
+      req.on("error", reject);
+      req.write(body);
+      req.end();
+    });
+  } else if (DISCORD_WEBHOOK) {
+    return new Promise((resolve, reject) => {
+      const body = JSON.stringify({
+        embeds: [{
+          title: "💡 New Suggestion",
+          description: text,
+          color: 0xc9a84c,
+          timestamp: new Date().toISOString(),
+          footer: { text: "MTG Commander Tracker" },
+        }],
+      });
+      const parsed = new URL(DISCORD_WEBHOOK);
+      const options = {
+        hostname: parsed.hostname,
+        path: parsed.pathname + parsed.search,
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+      };
+      const req = https.request(options, (r) => {
+        let data = "";
+        r.on("data", (d) => (data += d));
+        r.on("end", () => (r.statusCode < 300 ? resolve(data) : reject(new Error(`Discord ${r.statusCode}: ${data}`))));
+      });
+      req.on("error", reject);
+      req.write(body);
+      req.end();
+    });
+  } else {
+    console.warn("No DISCORD_WEBHOOK_URL or PROXY_FEEDBACK_URL set — skipping remote send.");
     return Promise.resolve();
   }
-  return new Promise((resolve, reject) => {
-    const body = JSON.stringify({
-      embeds: [{
-        title: "💡 New Suggestion",
-        description: text,
-        color: 0xc9a84c,
-        timestamp: new Date().toISOString(),
-        footer: { text: "MTG Commander Tracker" },
-      }],
-    });
-    const parsed = new URL(DISCORD_WEBHOOK);
-    const options = {
-      hostname: parsed.hostname,
-      path: parsed.pathname + parsed.search,
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
-    };
-    const req = https.request(options, (r) => {
-      let data = "";
-      r.on("data", (d) => (data += d));
-      r.on("end", () => (r.statusCode < 300 ? resolve(data) : reject(new Error(`Discord ${r.statusCode}: ${data}`))));
-    });
-    req.on("error", reject);
-    req.write(body);
-    req.end();
-  });
 }
 
 // ── Save suggestion locally as backup ───────────────────
@@ -127,7 +153,7 @@ const server = http.createServer((req, res) => {
 
         // Save locally + send to Discord
         saveSuggestionLocally(text, ip);
-        await sendToDiscord(text);
+        await sendSuggestionRemote(text, ip);
 
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ ok: true }));
