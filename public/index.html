@@ -299,6 +299,7 @@ let ws = null;
 let reconnTimer = null;
 let currentTab = 'game';
 let currentLobbyId = null;
+let selectedCmdOpponent = {};
 
 // ── MENU LOGIC ──
 async function fetchLobbies() {
@@ -342,6 +343,7 @@ async function createLobby() {
 
 function joinLobby(id) {
   currentLobbyId = id;
+  sessionStorage.setItem('currentLobbyId', id);
   document.getElementById('view-menu').classList.remove('on');
   document.getElementById('view-game').classList.add('on');
   connect();
@@ -354,6 +356,7 @@ function leaveLobby() {
     ws = null;
   }
   currentLobbyId = null;
+  sessionStorage.removeItem('currentLobbyId');
   state = null;
   myPlayer = null;
   document.getElementById('view-game').classList.remove('on');
@@ -415,18 +418,32 @@ function render() {
     const lifeClass = p.life <= 5 ? 'danger' : p.life <= 10 ? 'warn' : '';
     const tax = p.commandTax[0] || 0;
     
-    let cmdDmgHtml = '';
-    for (let j = 0; j < state.players.length; j++) {
-      if (j === idx) continue; // Don't show commander damage from self
-      const dmg = p.commanderDamage[j] || 0;
-      cmdDmgHtml += `
-        <div class="cmd-row">
-          <span class="cmd-name">${state.players[j].name}</span>
-          <button class="sm-btn" onclick="send({type:'UPDATE_COMMANDER_DAMAGE',targetId:${idx},sourceId:${j},delta:-1})">−</button>
-          <span class="cmd-val">${dmg}</span>
-          <button class="sm-btn" onclick="send({type:'UPDATE_COMMANDER_DAMAGE',targetId:${idx},sourceId:${j},delta:1})">+</button>
-        </div>`;
+    if (selectedCmdOpponent[idx] === undefined) {
+      for (let j = 0; j < state.players.length; j++) {
+        if (j !== idx) { selectedCmdOpponent[idx] = j; break; }
+      }
     }
+    const selSrc = selectedCmdOpponent[idx];
+    const dmg = p.commanderDamage[selSrc] || 0;
+    
+    let optionsHtml = '';
+    for (let j = 0; j < state.players.length; j++) {
+      if (j === idx) continue;
+      optionsHtml += `<option value="${j}" ${selSrc === j ? 'selected' : ''}>${state.players[j].name}</option>`;
+    }
+
+    let cmdDmgHtml = `
+      <div style="display:flex; flex-direction:column; gap:4px; padding: 2px;">
+        <select class="cmd-sel" style="background:var(--bg); color:var(--gold-light); border:1px solid var(--border); border-radius:4px; font-size:10px; padding:2px; font-family:'Cinzel',serif; outline:none;" onchange="selectedCmdOpponent[${idx}] = parseInt(this.value); render();">
+          ${optionsHtml}
+        </select>
+        <div class="cmd-row" style="background:transparent; justify-content:center; gap:8px; padding:0;">
+          <button class="sm-btn" onclick="send({type:'UPDATE_COMMANDER_DAMAGE',targetId:${idx},sourceId:${selSrc},delta:-1})">−</button>
+          <span class="cmd-val" style="font-size:16px;">${dmg}</span>
+          <button class="sm-btn" onclick="send({type:'UPDATE_COMMANDER_DAMAGE',targetId:${idx},sourceId:${selSrc},delta:1})">+</button>
+        </div>
+      </div>
+    `;
 
     grid.innerHTML += `
       <div class="card ${isActive ? 'active-turn' : ''} ${myPlayer === idx ? 'is-me' : 'opponent'}">
@@ -653,8 +670,13 @@ function startCooldownTimer() {
 }
 
 // Start app by fetching lobbies
-fetchLobbies();
-setInterval(fetchLobbies, 5000); // Poll for new lobbies every 5s if in menu
+const savedLobby = sessionStorage.getItem('currentLobbyId');
+if (savedLobby) {
+  joinLobby(savedLobby);
+} else {
+  fetchLobbies();
+}
+setInterval(() => { if (!currentLobbyId) fetchLobbies(); }, 5000); // Poll for new lobbies every 5s if in menu
 </script>
 </body>
 </html>

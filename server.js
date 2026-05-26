@@ -43,7 +43,7 @@ function defaultState(numPlayers = 2) {
       life: 40,
       poison: 0,
       commandTax: [0, 0],
-      commanderDamage: {}, // sourceId -> damage amount
+      commanderDamage: {},
       mana: defaultPlayerMana(),
     });
   }
@@ -58,6 +58,85 @@ function defaultState(numPlayers = 2) {
 
 // ── Lobbies ───────────────────────────────────────────────
 const lobbies = new Map();
+
+// ── Broadcast personalized state to all clients in a lobby ──
+function broadcastLobby(lobby) {
+  const claimedSlots = Array.from(new Set(Object.values(lobby.cookieMap)));
+  for (const client of lobby.clients) {
+    if (client.readyState !== 1) continue;
+    const assignedPlayer = client.clientId != null ? (lobby.cookieMap[client.clientId] ?? null) : null;
+    client.send(JSON.stringify({
+      type: "STATE",
+      state: lobby.state,
+      assignedPlayer,
+      claimedSlots
+    }));
+  }
+}
+
+// ── Handle a player explicitly leaving a lobby ──────────
+function handlePlayerLeave(lobby, clientId) {
+  if (!clientId || lobby.cookieMap[clientId] === undefined) return;
+
+  const removedSlot = lobby.cookieMap[clientId];
+  delete lobby.cookieMap[clientId];
+
+  const gameState = lobby.state;
+  const numPlayers = gameState.players.length;
+
+  // Shift all players above the removed slot down by one
+  gameState.players.splice(removedSlot, 1);
+  // Add an empty slot at the end
+  gameState.players.push({
+    id: numPlayers - 1,
+    name: "Waiting for player",
+    life: 40,
+    poison: 0,
+    commandTax: [0, 0],
+    commanderDamage: {},
+    mana: defaultPlayerMana(),
+  });
+  // Fix all IDs after the shift
+  for (let i = 0; i < numPlayers; i++) {
+    gameState.players[i].id = i;
+  }
+
+  // Remap cookieMap — everyone above the removed slot shifts down
+  for (const [cid, pid] of Object.entries(lobby.cookieMap)) {
+    if (pid > removedSlot) {
+      lobby.cookieMap[cid] = pid - 1;
+    }
+  }
+
+  // Rebuild commander damage indices for every player
+  for (let i = 0; i < numPlayers; i++) {
+    const oldDmg = gameState.players[i].commanderDamage;
+    const newDmg = {};
+    for (const [srcStr, val] of Object.entries(oldDmg)) {
+      const src = parseInt(srcStr);
+      if (src === removedSlot) continue; // damage from the removed player is gone
+      newDmg[src > removedSlot ? src - 1 : src] = val;
+    }
+    gameState.players[i].commanderDamage = newDmg;
+  }
+
+  // Fix active player index
+  const claimed = new Set(Object.values(lobby.cookieMap));
+  if (claimed.size === 0) {
+    gameState.activePlayer = 0;
+  } else if (gameState.activePlayer >= numPlayers) {
+    gameState.activePlayer = 0;
+  } else if (gameState.activePlayer > removedSlot) {
+    gameState.activePlayer--;
+  }
+  // If active player is now on an unclaimed slot, advance to next claimed one
+  if (claimed.size > 0 && !claimed.has(gameState.activePlayer)) {
+    for (let a = 0; a < numPlayers; a++) {
+      const next = (gameState.activePlayer + a) % numPlayers;
+      if (claimed.has(next)) { gameState.activePlayer = next; break; }
+    }
+  }
+}
 
 // ── Send Suggestion (Direct or via Proxy) ───────────────
 function sendSuggestionRemote(text, ip) {
@@ -193,7 +272,7 @@ const server = http.createServer((req, res) => {
           id,
           name: (name || "Commander Match").trim().substring(0, 32),
           state: defaultState(num),
-          cookieMap: {}, // clientId -> playerId
+          cookieMap: {},
           clients: new Set()
         });
         res.writeHead(200, { "Content-Type": "application/json" });
@@ -247,25 +326,27 @@ wss.on("connection", (ws, req) => {
         if (!taken.has(i)) {
           lobby.cookieMap[clientId] = i;
           assignedPlayer = i;
+          // If this slot had the default "Waiting for player" name, give it a real name
+          if (lobby.state.players[i].name === "Waiting for player") {
+            lobby.state.players[i].name = `Player ${i + 1}`;
+          }
           break;
         }
       }
     }
   }
 
-  const broadcast = () => {
-    const payload = JSON.stringify({ type: "STATE", state: lobby.state });
-    for (const client of lobby.clients) {
-      if (client.readyState === 1) client.send(payload);
-    }
-  };
+  // Send initial state (personalized)
+  const claimedSlots = Array.from(new Set(Object.values(lobby.cookieMap)));
+  ws.send(JSON.stringify({ type: "STATE", state: lobby.state, assignedPlayer, claimedSlots }));
+
+  // Also let other clients know about the new player count
+  broadcastLobby(lobby);
 
   const addLog = (msg) => {
     lobby.state.log.unshift(`[T${lobby.state.turn}] ${msg}`);
     if (lobby.state.log.length > 30) lobby.state.log = lobby.state.log.slice(0, 30);
   };
-
-  ws.send(JSON.stringify({ type: "STATE", state: lobby.state, assignedPlayer }));
 
   ws.on("message", (raw) => {
     try {
@@ -318,8 +399,18 @@ wss.on("connection", (ws, req) => {
           break;
         }
         case "NEXT_TURN": {
+          const claimed = new Set(Object.values(lobby.cookieMap));
+          const numP = gameState.players.length;
+          if (claimed.size === 0) break;
           gameState.turn += 1;
-          gameState.activePlayer = (gameState.activePlayer + 1) % gameState.players.length;
+          let next = (gameState.activePlayer + 1) % numP;
+          // Skip unclaimed (empty) slots
+          let attempts = 0;
+          while (!claimed.has(next) && attempts < numP) {
+            next = (next + 1) % numP;
+            attempts++;
+          }
+          gameState.activePlayer = next;
           const ap = gameState.players[gameState.activePlayer];
           ap.mana.available = { ...ap.mana.lands };
           addLog(`Turn ${gameState.turn} — ${ap.name}'s turn (mana reset)`);
@@ -337,19 +428,44 @@ wss.on("connection", (ws, req) => {
         }
         case "RESET": {
           const oldPlayers = gameState.players.length;
+          const oldNames = gameState.players.map(p => p.name);
           lobby.state = defaultState(oldPlayers);
-          addLog("Game reset");
+          // Preserve player names
+          for (let i = 0; i < oldPlayers; i++) {
+            lobby.state.players[i].name = oldNames[i];
+          }
+          addLog("Game reset — names preserved");
+          break;
+        }
+        case "LEAVE_LOBBY": {
+          const leavingId = ws.clientId;
+          if (leavingId && lobby.cookieMap[leavingId] !== undefined) {
+            const leavingName = gameState.players[lobby.cookieMap[leavingId]].name;
+            handlePlayerLeave(lobby, leavingId);
+            addLog(`${leavingName} left the lobby`);
+          }
           break;
         }
       }
 
-      broadcast();
+      broadcastLobby(lobby);
     } catch (e) {
       console.error("Error processing message:", e);
     }
   });
 
-  ws.on("close", () => lobby.clients.delete(ws));
+  ws.on("close", () => {
+    lobby.clients.delete(ws);
+    // If no WebSocket connections remain, clean up the lobby after a delay
+    if (lobby.clients.size === 0) {
+      setTimeout(() => {
+        if (lobby.clients.size === 0) {
+          lobbies.delete(lobbyId);
+          console.log(`Lobby ${lobbyId} removed (all connections closed)`);
+        }
+      }, 300_000); // 5 minute grace period
+    }
+  });
 });
 
 server.listen(PORT, () => console.log(`MTG Tracker v0.2 running at http://localhost:${PORT}`));
