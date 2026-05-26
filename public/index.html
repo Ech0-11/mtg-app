@@ -21,41 +21,59 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 body { background: var(--bg); color: var(--text); font-family: 'Crimson Pro', Georgia, serif; min-height: 100vh; overflow-x: hidden; }
 
-/* CONN */
+/* LAYOUT */
+.view { display: none; }
+.view.on { display: block; }
+
+/* ── MENU VIEW ── */
+.menu-view { padding: 20px; max-width: 600px; margin: 0 auto; }
+.menu-hdr { text-align: center; margin-bottom: 30px; }
+.menu-hdr h1 { font-family: 'Cinzel Decorative', serif; font-size: 28px; color: var(--gold); letter-spacing: 3px; }
+.menu-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+.menu-section h2 { font-family: 'Cinzel', serif; font-size: 14px; color: var(--gold-light); margin-bottom: 15px; letter-spacing: 2px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; font-family: 'Cinzel', serif; font-size: 10px; color: var(--dim); margin-bottom: 5px; }
+.form-group input, .form-group select { width: 100%; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 6px; font-family: 'Crimson Pro', serif; font-size: 16px; outline: none; }
+.form-group input:focus, .form-group select:focus { border-color: var(--gold); }
+.btn-primary { width: 100%; padding: 12px; background: rgba(201,168,76,0.15); border: 1px solid var(--gold-dark); color: var(--gold); border-radius: 8px; font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; }
+.btn-primary:active { transform: scale(0.98); background: rgba(201,168,76,0.25); }
+
+.lobby-list { display: flex; flex-direction: column; gap: 10px; }
+.lobby-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg3); padding: 12px; border-radius: 8px; border: 1px solid var(--border); }
+.lobby-info { display: flex; flex-direction: column; gap: 4px; }
+.lobby-name { font-family: 'Cinzel', serif; font-size: 14px; color: var(--gold-light); }
+.lobby-meta { font-family: 'Crimson Pro', serif; font-size: 12px; color: var(--dim); }
+.btn-join { padding: 8px 16px; background: var(--bg); border: 1px solid var(--gold-dark); color: var(--gold); border-radius: 6px; font-family: 'Cinzel', serif; font-size: 10px; cursor: pointer; }
+.btn-join:active { background: rgba(201,168,76,0.1); }
+.no-lobbies { text-align: center; color: var(--dim); font-size: 14px; padding: 20px; font-style: italic; }
+
+/* ── GAME VIEW ── */
 .conn { text-align: center; padding: 3px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 1px; }
 .conn.ok { color: var(--green); background: rgba(39,174,96,0.08); }
 .conn.err { color: var(--red); background: rgba(231,76,60,0.08); }
 
-/* HEADER */
-.hdr { text-align: center; padding: 12px 12px 6px; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, rgba(201,168,76,0.06) 0%, transparent 100%); }
+.hdr { text-align: center; padding: 12px 12px 6px; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, rgba(201,168,76,0.06) 0%, transparent 100%); position: relative; }
 .hdr h1 { font-family: 'Cinzel Decorative', serif; font-size: 17px; color: var(--gold); letter-spacing: 2px; }
+.btn-leave { position: absolute; left: 12px; top: 12px; background: transparent; border: 1px solid var(--border); color: var(--dim); padding: 4px 8px; border-radius: 4px; font-family: 'Cinzel', serif; font-size: 8px; cursor: pointer; }
+.btn-leave:active { background: var(--bg3); }
 .turn-row { display: inline-flex; align-items: center; gap: 7px; margin-top: 5px; font-family: 'Cinzel', serif; font-size: 11px; color: var(--dim); letter-spacing: 1px; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px var(--gold); animation: pulse 1.5s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-/* WHO AM I */
-.whoami { display: flex; gap: 8px; padding: 8px 12px 6px; border-bottom: 1px solid var(--border); }
-.whoami label { font-family: 'Cinzel', serif; font-size: 10px; color: var(--dim); letter-spacing: 1px; align-self: center; white-space: nowrap; }
-.whoami button { flex: 1; padding: 6px; background: var(--bg3); border: 1px solid var(--border); color: var(--dim); border-radius: 6px; font-family: 'Cinzel', serif; font-size: 10px; cursor: pointer; transition: all 0.2s; }
-.whoami button.on { background: rgba(201,168,76,0.15); border-color: var(--gold-dark); color: var(--gold); }
-
-/* NEXT TURN */
 .turn-bar { display: flex; justify-content: center; padding: 7px 12px; border-bottom: 1px solid var(--border); }
 .turn-bar button { padding: 9px 36px; background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.3); color: var(--gold); border-radius: 8px; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px; cursor: pointer; }
 .turn-bar button:active { background: rgba(201,168,76,0.18); }
 
-/* TABS */
 .tabs { display: flex; border-bottom: 1px solid var(--border); }
 .tab { flex: 1; padding: 10px; text-align: center; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px; color: var(--dim); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
 .tab.on { color: var(--gold); border-bottom-color: var(--gold); }
 
-/* PAGES */
 .page { display: none; }
 .page.on { display: block; }
 
-/* ── GAME TAB ── */
+/* CARDS */
 .players { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; }
-
 .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color 0.3s; }
 .card.opponent { background: #07070a; border-color: #1a1a24; }
 .card.is-me { border-color: #3a4a6a; }
@@ -63,12 +81,11 @@ body { background: var(--bg); color: var(--text); font-family: 'Crimson Pro', Ge
 
 .card-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px 6px; border-bottom: 1px solid var(--border); }
 .card-head input { flex: 1; background: transparent; border: none; color: var(--gold-light); font-family: 'Cinzel', serif; font-size: 13px; font-weight: 600; outline: none; letter-spacing: 1px; }
-.badge { font-family: 'Cinzel', serif; font-size: 8px; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; }
+.badge { font-family: 'Cinzel', serif; font-size: 8px; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
 .badge.you { color: #4a90d9; background: rgba(74,144,217,0.1); border: 1px solid rgba(74,144,217,0.2); }
 .badge.turn { color: var(--gold); background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.2); }
 .badge.dead { color: var(--red); background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.2); }
 
-/* LIFE */
 .life-row { display: flex; align-items: center; padding: 8px 12px; }
 .big-btn { width: 46px; height: 46px; background: var(--bg3); border: 1px solid var(--border); color: var(--text); font-size: 22px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; }
 .big-btn:active { background: rgba(201,168,76,0.1); transform: scale(0.92); }
@@ -78,19 +95,24 @@ body { background: var(--bg); color: var(--text); font-family: 'Crimson Pro', Ge
 .life-num.danger { color: var(--red); }
 .life-lbl { font-family: 'Cinzel', serif; font-size: 8px; color: var(--dim); letter-spacing: 2px; margin-top: 1px; }
 
-/* STATS */
-.stats { display: flex; gap: 6px; padding: 0 12px 8px; }
-.stat { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 5px 3px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.stats { display: flex; gap: 6px; padding: 0 12px 8px; flex-wrap: wrap; }
+.stat { flex: 1; min-width: 80px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 5px 3px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .stat-lbl { font-family: 'Cinzel', serif; font-size: 7px; color: var(--dim); letter-spacing: 1px; text-align: center; }
 .stat-val { font-family: 'Cinzel', serif; font-size: 17px; font-weight: 600; }
 .stat-val.pois { color: var(--poison); }
-.stat-val.cmd { color: var(--red); }
 .stat-val.tax { color: var(--gold); }
 .stat-btns { display: flex; gap: 3px; }
 .sm-btn { width: 23px; height: 23px; background: var(--bg); border: 1px solid var(--border); color: var(--dim); border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; user-select: none; }
 .sm-btn:active { color: var(--gold); transform: scale(0.9); }
 
-/* DICE */
+/* CMD DMG LIST */
+.cmd-dmg-list { width: 100%; max-height: 70px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; padding: 0 4px; }
+.cmd-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg); padding: 2px; border-radius: 4px; width: 100%; }
+.cmd-name { font-size: 9px; color: var(--dim); overflow: hidden; white-space: nowrap; max-width: 35px; flex: 1; }
+.cmd-val { font-size: 12px; font-family: 'Cinzel', serif; color: var(--red); font-weight: bold; width: 16px; text-align: center; }
+.cmd-row .sm-btn { width: 18px; height: 18px; font-size: 12px; }
+
+/* DICE & LOG */
 .dice-wrap { padding: 10px 12px 6px; border-top: 1px solid var(--border); }
 .dice-lbl { font-family: 'Cinzel', serif; font-size: 8px; color: var(--dim); letter-spacing: 2px; margin-bottom: 6px; }
 .dice-row { display: flex; gap: 5px; }
@@ -99,25 +121,21 @@ body { background: var(--bg); color: var(--text); font-family: 'Crimson Pro', Ge
 .dice-result { margin-top: 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; text-align: center; font-family: 'Cinzel', serif; font-size: 11px; color: var(--dim); letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; }
 .dice-big { font-size: 20px; color: var(--gold); font-family: 'Cinzel Decorative', serif; }
 
-/* RESET */
 .reset-bar { display: flex; justify-content: center; padding: 10px 12px 14px; }
 .reset-bar button { padding: 9px 36px; background: var(--bg3); border: 1px solid rgba(231,76,60,0.2); color: #c0392b; border-radius: 8px; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px; cursor: pointer; }
 .reset-bar button:active { background: rgba(231,76,60,0.1); }
 
-/* LOG */
 .log-wrap { border-top: 1px solid var(--border); padding: 8px 12px 16px; }
 .log-lbl { font-family: 'Cinzel', serif; font-size: 8px; color: var(--dim); letter-spacing: 2px; margin-bottom: 5px; }
 .log-list { max-height: 90px; overflow-y: auto; }
 .log-entry { font-family: 'Crimson Pro', serif; font-size: 12px; color: var(--dim); padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
 
-/* ── MANA TAB ── */
+/* MANA */
 .mana-page { padding: 12px; display: flex; flex-direction: column; gap: 14px; }
-
 .mana-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .mana-section-head { padding: 10px 14px 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
 .mana-section-title { font-family: 'Cinzel', serif; font-size: 11px; color: var(--gold); letter-spacing: 2px; }
 .mana-section-sub { font-family: 'Crimson Pro', serif; font-size: 12px; color: var(--dim); }
-
 .mana-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; padding: 10px 10px 12px; }
 .mana-pip { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .mana-sym { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; border: 2px solid rgba(255,255,255,0.1); }
@@ -131,18 +149,14 @@ body { background: var(--bg); color: var(--text); font-family: 'Crimson Pro', Ge
 .mana-ctrls { display: flex; gap: 3px; }
 .mx-btn { width: 24px; height: 18px; background: var(--bg); border: 1px solid var(--border); color: var(--dim); border-radius: 3px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; user-select: none; }
 .mx-btn:active { color: var(--gold); transform: scale(0.88); }
-
 .avail-note { font-family: 'Crimson Pro', serif; font-size: 11px; color: var(--dim); padding: 0 12px 10px; text-align: center; }
-
 .mana-reset-btn { margin: 0 12px 12px; width: calc(100% - 24px); padding: 9px; background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.25); color: var(--gold); border-radius: 8px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 1px; cursor: pointer; }
-.mana-reset-btn:active { background: rgba(201,168,76,0.15); }
-
-.total-row { display: flex; justify-content: center; gap: 20px; padding: 8px 12px; border-top: 1px solid var(--border); }
+.total-row { display: flex; justify-content: center; gap: 20px; padding: 8px 12px; border-top: 1px solid var(--border); flex-wrap: wrap; }
 .total-item { text-align: center; }
 .total-num { font-family: 'Cinzel', serif; font-size: 20px; color: var(--text); }
 .total-lbl { font-family: 'Cinzel', serif; font-size: 8px; color: var(--dim); letter-spacing: 1px; }
 
-/* ── SUGGEST TAB ── */
+/* SUGGEST */
 .suggest-page { padding: 16px 12px; display: flex; flex-direction: column; gap: 14px; }
 .suggest-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .suggest-card-head { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
@@ -150,20 +164,14 @@ body { background: var(--bg); color: var(--text); font-family: 'Crimson Pro', Ge
 .suggest-card-title { font-family: 'Cinzel', serif; font-size: 12px; color: var(--gold); letter-spacing: 2px; }
 .suggest-card-body { padding: 14px; }
 .suggest-desc { font-family: 'Crimson Pro', serif; font-size: 14px; color: var(--dim); margin-bottom: 12px; line-height: 1.5; }
-.suggest-textarea { width: 100%; min-height: 100px; max-height: 200px; padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Crimson Pro', serif; font-size: 14px; resize: vertical; outline: none; transition: border-color 0.2s; }
+.suggest-textarea { width: 100%; min-height: 100px; max-height: 200px; padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Crimson Pro', serif; font-size: 14px; resize: vertical; outline: none; }
 .suggest-textarea:focus { border-color: var(--gold-dark); }
-.suggest-textarea::placeholder { color: rgba(138,128,112,0.5); }
 .suggest-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
-.suggest-charcount { font-family: 'Cinzel', serif; font-size: 9px; color: var(--dim); letter-spacing: 1px; }
-.suggest-charcount.over { color: var(--red); }
-.suggest-submit { padding: 10px 32px; background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.35); color: var(--gold); border-radius: 8px; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px; cursor: pointer; transition: all 0.2s; }
-.suggest-submit:hover { background: rgba(201,168,76,0.18); }
-.suggest-submit:active { transform: scale(0.95); }
-.suggest-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-.suggest-feedback { margin-top: 10px; padding: 10px 14px; border-radius: 8px; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px; text-align: center; display: none; animation: fadeSlide 0.3s ease; }
-.suggest-feedback.ok { display: block; background: rgba(39,174,96,0.1); border: 1px solid rgba(39,174,96,0.25); color: var(--green); }
-.suggest-feedback.err { display: block; background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.25); color: var(--red); }
-@keyframes fadeSlide { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+.suggest-charcount { font-family: 'Cinzel', serif; font-size: 9px; color: var(--dim); }
+.suggest-submit { padding: 10px 32px; background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.35); color: var(--gold); border-radius: 8px; font-family: 'Cinzel', serif; font-size: 11px; cursor: pointer; }
+.suggest-feedback { margin-top: 10px; padding: 10px 14px; border-radius: 8px; font-family: 'Cinzel', serif; font-size: 11px; text-align: center; display: none; }
+.suggest-feedback.ok { display: block; background: rgba(39,174,96,0.1); color: var(--green); }
+.suggest-feedback.err { display: block; background: rgba(231,76,60,0.1); color: var(--red); }
 .suggest-cooldown { font-family: 'Crimson Pro', serif; font-size: 12px; color: var(--dim); text-align: center; padding: 6px 0 0; }
 
 ::-webkit-scrollbar { width: 4px; }
@@ -173,71 +181,101 @@ body { background: var(--bg); color: var(--text); font-family: 'Crimson Pro', Ge
 </head>
 <body>
 
-<div class="conn err" id="conn">⚡ CONNECTING...</div>
+<!-- MENU VIEW -->
+<div id="view-menu" class="view on menu-view">
+  <div class="menu-hdr">
+    <h1>⚔ Commander ⚔</h1>
+  </div>
 
-<div class="hdr">
-  <h1>⚔ Commander ⚔</h1>
-  <div class="turn-row"><div class="dot"></div><span id="turnLbl">Turn 1</span></div>
-</div>
-
-<div class="whoami">
-  <label>I AM:</label>
-  <button id="wb0" class="on" onclick="setMe(0)">PLAYER 1</button>
-  <button id="wb1" onclick="setMe(1)">PLAYER 2</button>
-</div>
-
-<div class="turn-bar">
-  <button onclick="nextTurn()">⚔ NEXT TURN</button>
-</div>
-
-<div class="tabs">
-  <div class="tab on" onclick="switchTab('game')">⚔ GAME</div>
-  <div class="tab" onclick="switchTab('mana')">🔮 MANA</div>
-  <div class="tab" onclick="switchTab('suggest')">💡 SUGGEST</div>
-</div>
-
-<div id="page-game" class="page on">
-  <div class="players" id="players"></div>
-  <div class="dice-wrap">
-    <div class="dice-lbl">🎲 DICE ROLLER</div>
-    <div class="dice-row">
-      <button class="d-btn" onclick="roll(4)">d4</button>
-      <button class="d-btn" onclick="roll(6)">d6</button>
-      <button class="d-btn" onclick="roll(8)">d8</button>
-      <button class="d-btn" onclick="roll(10)">d10</button>
-      <button class="d-btn" onclick="roll(12)">d12</button>
-      <button class="d-btn" onclick="roll(20)">d20</button>
-      <button class="d-btn" onclick="roll(100)">d100</button>
+  <div class="menu-section">
+    <h2>CREATE LOBBY</h2>
+    <div class="form-group">
+      <label>LOBBY NAME</label>
+      <input type="text" id="newLobbyName" placeholder="e.g. Friday Night Magic" maxlength="32">
     </div>
-    <div class="dice-result" id="diceResult">Roll a die above</div>
+    <div class="form-group">
+      <label>PLAYERS</label>
+      <select id="newLobbyPlayers">
+        <option value="2">2 Players</option>
+        <option value="3">3 Players</option>
+        <option value="4" selected>4 Players</option>
+        <option value="5">5 Players</option>
+        <option value="6">6 Players</option>
+      </select>
+    </div>
+    <button class="btn-primary" onclick="createLobby()">CREATE & JOIN</button>
   </div>
-  <div class="reset-bar"><button onclick="resetGame()">↺ RESET GAME</button></div>
-  <div class="log-wrap">
-    <div class="log-lbl">📜 GAME LOG</div>
-    <div class="log-list" id="logList"></div>
+
+  <div class="menu-section">
+    <h2>JOIN LOBBY</h2>
+    <div class="lobby-list" id="lobbyList">
+      <div class="no-lobbies">Loading lobbies...</div>
+    </div>
   </div>
 </div>
 
-<div id="page-mana" class="page">
-  <div class="mana-page" id="manaPage"></div>
-</div>
+<!-- GAME VIEW -->
+<div id="view-game" class="view">
+  <div class="conn err" id="conn">⚡ CONNECTING...</div>
+  <div class="hdr">
+    <button class="btn-leave" onclick="leaveLobby()">◂ LEAVE</button>
+    <h1>⚔ Commander ⚔</h1>
+    <div class="turn-row"><div class="dot"></div><span id="turnLbl">Turn 1</span></div>
+  </div>
 
-<div id="page-suggest" class="page">
-  <div class="suggest-page">
-    <div class="suggest-card">
-      <div class="suggest-card-head">
-        <span class="suggest-icon">💡</span>
-        <span class="suggest-card-title">SEND A SUGGESTION</span>
+  <div class="turn-bar">
+    <button onclick="nextTurn()">⚔ NEXT TURN</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab on" onclick="switchTab('game')">⚔ GAME</div>
+    <div class="tab" onclick="switchTab('mana')">🔮 MANA</div>
+    <div class="tab" onclick="switchTab('suggest')">💡 SUGGEST</div>
+  </div>
+
+  <div id="page-game" class="page on">
+    <div class="players" id="players"></div>
+    <div class="dice-wrap">
+      <div class="dice-lbl">🎲 DICE ROLLER</div>
+      <div class="dice-row">
+        <button class="d-btn" onclick="roll(4)">d4</button>
+        <button class="d-btn" onclick="roll(6)">d6</button>
+        <button class="d-btn" onclick="roll(8)">d8</button>
+        <button class="d-btn" onclick="roll(10)">d10</button>
+        <button class="d-btn" onclick="roll(12)">d12</button>
+        <button class="d-btn" onclick="roll(20)">d20</button>
+        <button class="d-btn" onclick="roll(100)">d100</button>
       </div>
-      <div class="suggest-card-body">
-        <div class="suggest-desc">Got an idea for a new feature, found a bug, or want something changed? Drop it here — it'll be sent straight to the dev via Discord.</div>
-        <textarea id="suggestBox" class="suggest-textarea" placeholder="Your suggestion…" maxlength="1000"></textarea>
-        <div class="suggest-meta">
-          <span id="suggestCount" class="suggest-charcount">0 / 1000</span>
-          <button id="suggestBtn" class="suggest-submit" onclick="submitSuggestion()">⚡ SEND</button>
+      <div class="dice-result" id="diceResult">Roll a die above</div>
+    </div>
+    <div class="reset-bar"><button onclick="resetGame()">↺ RESET GAME</button></div>
+    <div class="log-wrap">
+      <div class="log-lbl">📜 GAME LOG</div>
+      <div class="log-list" id="logList"></div>
+    </div>
+  </div>
+
+  <div id="page-mana" class="page">
+    <div class="mana-page" id="manaPage"></div>
+  </div>
+
+  <div id="page-suggest" class="page">
+    <div class="suggest-page">
+      <div class="suggest-card">
+        <div class="suggest-card-head">
+          <span class="suggest-icon">💡</span>
+          <span class="suggest-card-title">SEND A SUGGESTION</span>
         </div>
-        <div id="suggestFeedback" class="suggest-feedback"></div>
-        <div id="suggestCooldown" class="suggest-cooldown"></div>
+        <div class="suggest-card-body">
+          <div class="suggest-desc">Got an idea for a new feature, found a bug, or want something changed? Drop it here — it'll be sent straight to the dev via Discord.</div>
+          <textarea id="suggestBox" class="suggest-textarea" placeholder="Your suggestion…" maxlength="1000"></textarea>
+          <div class="suggest-meta">
+            <span id="suggestCount" class="suggest-charcount">0 / 1000</span>
+            <button id="suggestBtn" class="suggest-submit" onclick="submitSuggestion()">⚡ SEND</button>
+          </div>
+          <div id="suggestFeedback" class="suggest-feedback"></div>
+          <div id="suggestCooldown" class="suggest-cooldown"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -256,18 +294,71 @@ const CLIENT_ID = getClientId();
 
 // ── STATE ──
 let state = null;
-let myPlayer = 0;
+let myPlayer = null;
 let ws = null;
 let reconnTimer = null;
 let currentTab = 'game';
+let currentLobbyId = null;
 
-// ── PLAYER ASSIGNMENT ──
-function setMe(id) {
-  myPlayer = id;
-  document.getElementById('wb0').classList.toggle('on', id === 0);
-  document.getElementById('wb1').classList.toggle('on', id === 1);
-  send({ type: 'CLAIM_PLAYER', clientId: CLIENT_ID, playerId: id });
-  render();
+// ── MENU LOGIC ──
+async function fetchLobbies() {
+  try {
+    const res = await fetch('/api/lobbies');
+    const lobbies = await res.json();
+    const list = document.getElementById('lobbyList');
+    if (lobbies.length === 0) {
+      list.innerHTML = `<div class="no-lobbies">No active lobbies found. Create one above!</div>`;
+      return;
+    }
+    list.innerHTML = lobbies.map(l => `
+      <div class="lobby-item">
+        <div class="lobby-info">
+          <div class="lobby-name">${l.name}</div>
+          <div class="lobby-meta">${l.currentPlayers} / ${l.maxPlayers} Players Joined</div>
+        </div>
+        <button class="btn-join" onclick="joinLobby('${l.id}')">JOIN</button>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error("Failed to fetch lobbies");
+  }
+}
+
+async function createLobby() {
+  const name = document.getElementById('newLobbyName').value;
+  const players = document.getElementById('newLobbyPlayers').value;
+  try {
+    const res = await fetch('/api/lobbies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, maxPlayers: players })
+    });
+    const data = await res.json();
+    if (data.id) joinLobby(data.id);
+  } catch (e) {
+    console.error("Failed to create lobby");
+  }
+}
+
+function joinLobby(id) {
+  currentLobbyId = id;
+  document.getElementById('view-menu').classList.remove('on');
+  document.getElementById('view-game').classList.add('on');
+  connect();
+}
+
+function leaveLobby() {
+  if (ws) {
+    ws.onclose = null; // prevent reconnect
+    ws.close();
+    ws = null;
+  }
+  currentLobbyId = null;
+  state = null;
+  myPlayer = null;
+  document.getElementById('view-game').classList.remove('on');
+  document.getElementById('view-menu').classList.add('on');
+  fetchLobbies();
 }
 
 // ── TAB SWITCHING ──
@@ -280,8 +371,9 @@ function switchTab(t) {
 
 // ── WS ──
 function connect() {
+  if (!currentLobbyId) return;
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  ws = new WebSocket(`${proto}//${location.host}`);
+  ws = new WebSocket(`${proto}//${location.host}/ws/${currentLobbyId}`);
   ws.onopen = () => {
     document.getElementById('conn').textContent = '✦ CONNECTED';
     document.getElementById('conn').className = 'conn ok';
@@ -297,11 +389,8 @@ function connect() {
     const msg = JSON.parse(e.data);
     if (msg.type === 'STATE') {
       state = msg.state;
-      // Server told us our assigned player from cookie
-      if (msg.assignedPlayer !== null && msg.assignedPlayer !== undefined) {
+      if (msg.assignedPlayer !== undefined && msg.assignedPlayer !== null) {
         myPlayer = msg.assignedPlayer;
-        document.getElementById('wb0').classList.toggle('on', myPlayer === 0);
-        document.getElementById('wb1').classList.toggle('on', myPlayer === 1);
       }
       render();
     }
@@ -321,12 +410,23 @@ function render() {
   const grid = document.getElementById('players');
   grid.innerHTML = '';
   state.players.forEach((p, idx) => {
-    const other = idx === 0 ? 1 : 0;
     const isActive = state.activePlayer === idx;
     const isDead = p.life <= 0 || p.poison >= 10;
     const lifeClass = p.life <= 5 ? 'danger' : p.life <= 10 ? 'warn' : '';
-    const cmdDmg = p.commanderDamage[other] || 0;
     const tax = p.commandTax[0] || 0;
+    
+    let cmdDmgHtml = '';
+    for (let j = 0; j < state.players.length; j++) {
+      if (j === idx) continue; // Don't show commander damage from self
+      const dmg = p.commanderDamage[j] || 0;
+      cmdDmgHtml += `
+        <div class="cmd-row">
+          <span class="cmd-name">${state.players[j].name}</span>
+          <button class="sm-btn" onclick="send({type:'UPDATE_COMMANDER_DAMAGE',targetId:${idx},sourceId:${j},delta:-1})">−</button>
+          <span class="cmd-val">${dmg}</span>
+          <button class="sm-btn" onclick="send({type:'UPDATE_COMMANDER_DAMAGE',targetId:${idx},sourceId:${j},delta:1})">+</button>
+        </div>`;
+    }
 
     grid.innerHTML += `
       <div class="card ${isActive ? 'active-turn' : ''} ${myPlayer === idx ? 'is-me' : 'opponent'}">
@@ -355,19 +455,17 @@ function render() {
             </div>
           </div>
           <div class="stat">
-            <div class="stat-lbl">⚔ CMD DMG</div>
-            <div class="stat-val cmd">${cmdDmg}/21</div>
-            <div class="stat-btns">
-              <button class="sm-btn" onclick="send({type:'UPDATE_COMMANDER_DAMAGE',targetId:${idx},sourceId:${other},delta:-1})">−</button>
-              <button class="sm-btn" onclick="send({type:'UPDATE_COMMANDER_DAMAGE',targetId:${idx},sourceId:${other},delta:1})">+</button>
-            </div>
-          </div>
-          <div class="stat">
             <div class="stat-lbl">💰 CMD TAX</div>
             <div class="stat-val tax">{${tax * 2}}</div>
             <div class="stat-btns">
               <button class="sm-btn" onclick="send({type:'UPDATE_COMMAND_TAX',playerId:${idx},commanderIdx:0,delta:-1})">−</button>
               <button class="sm-btn" onclick="send({type:'UPDATE_COMMAND_TAX',playerId:${idx},commanderIdx:0,delta:1})">+</button>
+            </div>
+          </div>
+          <div class="stat" style="flex: 2; align-items: stretch; padding: 4px;">
+            <div class="stat-lbl" style="margin-bottom: 3px;">⚔ CMD DMG FROM</div>
+            <div class="cmd-dmg-list">
+              ${cmdDmgHtml}
             </div>
           </div>
         </div>
@@ -395,13 +493,35 @@ const COLORS = ['W','U','B','R','G','C'];
 const COLOR_NAMES = { W:'Plains', U:'Islands', B:'Swamps', R:'Mountains', G:'Forests', C:'Other' };
 
 function renderMana() {
-  if (!state) return;
+  if (!state || myPlayer === null) return;
   const p = state.players[myPlayer];
+  if (!p) return; // Spectator
   const lands = p.mana.lands;
   const avail = p.mana.available;
   const totalLands = COLORS.reduce((a,c) => a + (lands[c]||0), 0);
   const totalAvail = COLORS.reduce((a,c) => a + (avail[c]||0), 0);
   const isMyTurn = state.activePlayer === myPlayer;
+
+  let oppsManaHtml = '';
+  for (let j = 0; j < state.players.length; j++) {
+    if (j === myPlayer) continue;
+    const opp = state.players[j];
+    oppsManaHtml += `
+      <div class="mana-section">
+        <div class="mana-section-head">
+          <div class="mana-section-title">${opp.name}'s Lands</div>
+          <div class="mana-section-sub">read only</div>
+        </div>
+        <div class="mana-grid">
+          ${COLORS.map(c => `
+            <div class="mana-pip">
+              <div class="mana-sym ${c}">${c==='C'?'◆':c}</div>
+              <div class="mana-count" style="color:var(--dim)">${opp.mana.lands[c]||0}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    `;
+  }
 
   document.getElementById('manaPage').innerHTML = `
     <!-- LANDS -->
@@ -450,25 +570,11 @@ function renderMana() {
     </div>
 
     <!-- OPPONENT SUMMARY -->
-    <div class="mana-section">
-      <div class="mana-section-head">
-        <div class="mana-section-title">${state.players[myPlayer===0?1:0].name}'s Lands</div>
-        <div class="mana-section-sub">read only</div>
-      </div>
-      <div class="mana-grid">
-        ${COLORS.map(c => {
-          const opp = state.players[myPlayer===0?1:0];
-          return `<div class="mana-pip">
-            <div class="mana-sym ${c}">${c==='C'?'◆':c}</div>
-            <div class="mana-count" style="color:var(--dim)">${opp.mana.lands[c]||0}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
+    ${oppsManaHtml}
   `;
 }
 
-function roll(sides) { send({ type:'ROLL_DICE', sides, playerId: myPlayer }); }
+function roll(sides) { if(myPlayer!==null) send({ type:'ROLL_DICE', sides, playerId: myPlayer }); }
 function nextTurn() { send({ type:'NEXT_TURN' }); }
 function resetGame() { if (confirm('Reset the entire game?')) send({ type:'RESET' }); }
 
@@ -546,7 +652,9 @@ function startCooldownTimer() {
   tick();
 }
 
-connect();
+// Start app by fetching lobbies
+fetchLobbies();
+setInterval(fetchLobbies, 5000); // Poll for new lobbies every 5s if in menu
 </script>
 </body>
 </html>

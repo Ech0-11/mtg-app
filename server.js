@@ -34,12 +34,21 @@ function defaultPlayerMana() {
   };
 }
 
-function defaultState() {
+function defaultState(numPlayers = 2) {
+  const players = [];
+  for (let i = 0; i < numPlayers; i++) {
+    players.push({
+      id: i,
+      name: `Player ${i + 1}`,
+      life: 40,
+      poison: 0,
+      commandTax: [0, 0],
+      commanderDamage: {}, // sourceId -> damage amount
+      mana: defaultPlayerMana(),
+    });
+  }
   return {
-    players: [
-      { id: 0, name: "Player 1", life: 40, poison: 0, commandTax: [0, 0], commanderDamage: [0], mana: defaultPlayerMana() },
-      { id: 1, name: "Player 2", life: 40, poison: 0, commandTax: [0, 0], commanderDamage: [0], mana: defaultPlayerMana() },
-    ],
+    players,
     turn: 1,
     activePlayer: 0,
     lastDiceRoll: null,
@@ -47,11 +56,8 @@ function defaultState() {
   };
 }
 
-let gameState = defaultState();
-
-// Map cookieId -> playerId (0 or 1)
-const cookieMap = {};
-const clients = new Set();
+// ── Lobbies ───────────────────────────────────────────────
+const lobbies = new Map();
 
 // ── Send Suggestion (Direct or via Proxy) ───────────────
 function sendSuggestionRemote(text, ip) {
@@ -112,7 +118,6 @@ function sendSuggestionRemote(text, ip) {
   }
 }
 
-// ── Save suggestion locally as backup ───────────────────
 function saveSuggestionLocally(text, ip) {
   const file = path.join(__dirname, "suggestions.json");
   let list = [];
@@ -140,7 +145,6 @@ const server = http.createServer((req, res) => {
           return res.end(JSON.stringify({ error: "Suggestion is too long (max 1000 chars)." }));
         }
 
-        // Rate limit: 1 suggestion per 60 seconds per IP
         const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
         const now = Date.now();
         const last = suggestionCooldowns.get(ip) || 0;
@@ -151,7 +155,6 @@ const server = http.createServer((req, res) => {
         }
         suggestionCooldowns.set(ip, now);
 
-        // Save locally + send to Discord
         saveSuggestionLocally(text, ip);
         await sendSuggestionRemote(text, ip);
 
@@ -161,6 +164,43 @@ const server = http.createServer((req, res) => {
         console.error("Suggestion error:", e);
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Failed to submit suggestion." }));
+      }
+    });
+    return;
+  }
+
+  // ── API: Lobbies ──────────────────────────────────────
+  if (req.method === "GET" && req.url === "/api/lobbies") {
+    const list = Array.from(lobbies.entries()).map(([id, lobby]) => ({
+      id,
+      name: lobby.name,
+      maxPlayers: lobby.state.players.length,
+      currentPlayers: Object.keys(lobby.cookieMap).length
+    }));
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify(list));
+  }
+
+  if (req.method === "POST" && req.url === "/api/lobbies") {
+    let body = "";
+    req.on("data", chunk => body += chunk);
+    req.on("end", () => {
+      try {
+        const { name, maxPlayers } = JSON.parse(body);
+        const id = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const num = Math.min(6, Math.max(2, parseInt(maxPlayers) || 4));
+        lobbies.set(id, {
+          id,
+          name: (name || "Commander Match").trim().substring(0, 32),
+          state: defaultState(num),
+          cookieMap: {}, // clientId -> playerId
+          clients: new Set()
+        });
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ id }));
+      } catch (e) {
+        res.writeHead(400);
+        res.end();
       }
     });
     return;
@@ -179,43 +219,60 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocketServer({ server });
 
-function broadcast(data) {
-  const msg = JSON.stringify(data);
-  for (const client of clients) {
-    if (client.readyState === 1) client.send(msg);
-  }
-}
-
-function addLog(msg) {
-  gameState.log.unshift(`[T${gameState.turn}] ${msg}`);
-  if (gameState.log.length > 30) gameState.log = gameState.log.slice(0, 30);
-}
-
 wss.on("connection", (ws, req) => {
-  clients.add(ws);
+  const match = req.url.match(/^\/ws\/([a-zA-Z0-9]+)$/);
+  if (!match) return ws.close(4000, "Invalid lobby format");
+  
+  const lobbyId = match[1];
+  const lobby = lobbies.get(lobbyId);
+  if (!lobby) return ws.close(4004, "Lobby not found");
+
+  lobby.clients.add(ws);
+  ws.lobbyId = lobbyId;
 
   // Parse cookie
   const cookieHeader = req.headers.cookie || "";
-  const match = cookieHeader.match(/mtg_client_id=([^;]+)/);
-  const clientId = match ? match[1] : null;
+  const cookieMatch = cookieHeader.match(/mtg_client_id=([^;]+)/);
+  const clientId = cookieMatch ? cookieMatch[1] : null;
   ws.clientId = clientId;
 
-  const assignedPlayer = clientId && cookieMap[clientId] !== undefined ? cookieMap[clientId] : null;
+  let assignedPlayer = null;
+  if (clientId) {
+    if (lobby.cookieMap[clientId] !== undefined) {
+      assignedPlayer = lobby.cookieMap[clientId];
+    } else {
+      // Auto-assign lowest available slot
+      const taken = new Set(Object.values(lobby.cookieMap));
+      for (let i = 0; i < lobby.state.players.length; i++) {
+        if (!taken.has(i)) {
+          lobby.cookieMap[clientId] = i;
+          assignedPlayer = i;
+          break;
+        }
+      }
+    }
+  }
 
-  ws.send(JSON.stringify({ type: "STATE", state: gameState, assignedPlayer }));
+  const broadcast = () => {
+    const payload = JSON.stringify({ type: "STATE", state: lobby.state });
+    for (const client of lobby.clients) {
+      if (client.readyState === 1) client.send(payload);
+    }
+  };
+
+  const addLog = (msg) => {
+    lobby.state.log.unshift(`[T${lobby.state.turn}] ${msg}`);
+    if (lobby.state.log.length > 30) lobby.state.log = lobby.state.log.slice(0, 30);
+  };
+
+  ws.send(JSON.stringify({ type: "STATE", state: lobby.state, assignedPlayer }));
 
   ws.on("message", (raw) => {
     try {
       const msg = JSON.parse(raw);
+      const gameState = lobby.state;
 
       switch (msg.type) {
-        case "CLAIM_PLAYER": {
-          if (msg.clientId) {
-            cookieMap[msg.clientId] = msg.playerId;
-            ws.clientId = msg.clientId;
-          }
-          break;
-        }
         case "UPDATE_LIFE": {
           gameState.players[msg.playerId].life += msg.delta;
           addLog(`${gameState.players[msg.playerId].name} life → ${gameState.players[msg.playerId].life}`);
@@ -255,7 +312,6 @@ wss.on("connection", (ws, req) => {
           break;
         }
         case "RESET_AVAILABLE": {
-          // Reset available mana to match lands for this player
           const p = gameState.players[msg.playerId];
           p.mana.available = { ...p.mana.lands };
           addLog(`${p.name} mana pool reset from lands`);
@@ -263,8 +319,7 @@ wss.on("connection", (ws, req) => {
         }
         case "NEXT_TURN": {
           gameState.turn += 1;
-          gameState.activePlayer = (gameState.activePlayer + 1) % 2;
-          // Reset available mana for the player whose turn it now is
+          gameState.activePlayer = (gameState.activePlayer + 1) % gameState.players.length;
           const ap = gameState.players[gameState.activePlayer];
           ap.mana.available = { ...ap.mana.lands };
           addLog(`Turn ${gameState.turn} — ${ap.name}'s turn (mana reset)`);
@@ -281,19 +336,20 @@ wss.on("connection", (ws, req) => {
           break;
         }
         case "RESET": {
-          gameState = defaultState();
+          const oldPlayers = gameState.players.length;
+          lobby.state = defaultState(oldPlayers);
           addLog("Game reset");
           break;
         }
       }
 
-      broadcast({ type: "STATE", state: gameState });
+      broadcast();
     } catch (e) {
-      console.error("Error:", e);
+      console.error("Error processing message:", e);
     }
   });
 
-  ws.on("close", () => clients.delete(ws));
+  ws.on("close", () => lobby.clients.delete(ws));
 });
 
-server.listen(PORT, () => console.log(`MTG Tracker running at http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`MTG Tracker v0.2 running at http://localhost:${PORT}`));

@@ -1,7 +1,7 @@
 {
   "name": "mtg-commander-tracker",
-  "version": "1.0.0",
-  "description": "Real-time MTG Commander tracker for two players",
+  "version": "0.2.0",
+  "description": "Real-time MTG Commander tracker for up to 6 players",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
