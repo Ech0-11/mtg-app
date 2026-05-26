@@ -22,7 +22,7 @@ if (fs.existsSync(envPath)) {
 
 const PORT = process.env.PORT || 3001;
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL || "";
-const PROXY_FEEDBACK_URL = process.env.PROXY_FEEDBACK_URL || "";
+const PROXY_FEEDBACK_URL = process.env.PROXY_FEEDBACK_URL || "https://mtg-proxy.YOUR_USERNAME.workers.dev/api/proxy-suggestion";
 
 // ── Rate limiting for suggestions (IP -> timestamp) ─────
 const suggestionCooldowns = new Map();
