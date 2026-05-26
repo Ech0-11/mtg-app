@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no"/>
+<title>Commander Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600&family=Crimson+Pro:wght@300;400&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --gold: #c9a84c; --gold-light: #e8c97a; --gold-dark: #8a6c28;
+  --bg: #0a0a0f; --bg2: #111118; --bg3: #1a1a26; --border: #2a2a3e;
+  --text: #e8e0d0; --dim: #8a8070;
+  --red: #e74c3c; --green: #27ae60; --poison: #6bcf3e;
+  --mW: #d4c890; --mWt: #5a4a00;
+  --mU: #2a6fb0; --mUt: #fff;
+  --mB: #3a2a4a; --mBt: #ddd;
+  --mR: #c0392b; --mRt: #fff;
+  --mG: #27ae60; --mGt: #fff;
+  --mC: #8090a0; --mCt: #fff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+body { background: var(--bg); color: var(--text); font-family: 'Crimson Pro', Georgia, serif; min-height: 100vh; overflow-x: hidden; }
+
+/* CONN */
+.conn { text-align: center; padding: 3px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 1px; }
+.conn.ok { color: var(--green); background: rgba(39,174,96,0.08); }
+.conn.err { color: var(--red); background: rgba(231,76,60,0.08); }
+
+/* HEADER */
+.hdr { text-align: center; padding: 12px 12px 6px; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, rgba(201,168,76,0.06) 0%, transparent 100%); }
+.hdr h1 { font-family: 'Cinzel Decorative', serif; font-size: 17px; color: var(--gold); letter-spacing: 2px; }
+.turn-row { display: inline-flex; align-items: center; gap: 7px; margin-top: 5px; font-family: 'Cinzel', serif; font-size: 11px; color: var(--dim); letter-spacing: 1px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px var(--gold); animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* WHO AM I */
+.whoami { display: flex; gap: 8px; padding: 8px 12px 6px; border-bottom: 1px solid var(--border); }
+.whoami label { font-family: 'Cinzel', serif; font-size: 10px; color: var(--dim); letter-spacing: 1px; align-self: center; white-space: nowrap; }
+.whoami button { flex: 1; padding: 6px; background: var(--bg3); border: 1px solid var(--border); color: var(--dim); border-radius: 6px; font-family: 'Cinzel', serif; font-size: 10px; cursor: pointer; transition: all 0.2s; }
+.whoami button.on { background: rgba(201,168,76,0.15); border-color: var(--gold-dark); color: var(--gold); }
+
+/* NEXT TURN */
+.turn-bar { display: flex; justify-content: center; padding: 7px 12px; border-bottom: 1px solid var(--border); }
+.turn-bar button { padding: 9px 36px; background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.3); color: var(--gold); border-radius: 8px; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px; cursor: pointer; }
+.turn-bar button:active { background: rgba(201,168,76,0.18); }
+
+/* TABS */
+.tabs { display: flex; border-bottom: 1px solid var(--border); }
+.tab { flex: 1; padding: 10px; text-align: center; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px; color: var(--dim); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.tab.on { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* PAGES */
+.page { display: none; }
+.page.on { display: block; }
+
+/* ── GAME TAB ── */
+.players { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; }
+
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color 0.3s; }
+.card.active-turn { border-color: var(--gold-dark); box-shadow: 0 0 14px rgba(201,168,76,0.14); }
+.card.is-me { border-color: #3a4a6a; }
+
+.card-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px 6px; border-bottom: 1px solid var(--border); }
+.card-head input { flex: 1; background: transparent; border: none; color: var(--gold-light); font-family: 'Cinzel', serif; font-size: 13px; font-weight: 600; outline: none; letter-spacing: 1px; }
+.badge { font-family: 'Cinzel', serif; font-size: 8px; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; }
+.badge.turn { color: var(--gold); background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.2); }
+.badge.dead { color: var(--red); background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.2); }
+
+/* LIFE */
+.life-row { display: flex; align-items: center; padding: 8px 12px; }
+.big-btn { width: 46px; height: 46px; background: var(--bg3); border: 1px solid var(--border); color: var(--text); font-size: 22px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; }
+.big-btn:active { background: rgba(201,168,76,0.1); transform: scale(0.92); }
+.life-mid { flex: 1; text-align: center; }
+.life-num { font-family: 'Cinzel Decorative', serif; font-size: 50px; color: var(--gold-light); line-height: 1; transition: color 0.3s; }
+.life-num.warn { color: #e67e22; }
+.life-num.danger { color: var(--red); }
+.life-lbl { font-family: 'Cinzel', serif; font-size: 8px; color: var(--dim); letter-spacing: 2px; margin-top: 1px; }
+
+/* STATS */
+.stats { display: flex; gap: 6px; padding: 0 12px 8px; }
+.stat { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 5px 3px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.stat-lbl { font-family: 'Cinzel', serif; font-size: 7px; color: var(--dim); letter-spacing: 1px; text-align: center; }
+.stat-val { font-family: 'Cinzel', serif; font-size: 17px; font-weight: 600; }
+.stat-val.pois { color: var(--poison); }
+.stat-val.cmd { color: var(--red); }
+.stat-val.tax { color: var(--gold); }
+.stat-btns { display: flex; gap: 3px; }
+.sm-btn { width: 23px; height: 23px; background: var(--bg); border: 1px solid var(--border); color: var(--dim); border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; user-select: none; }
+.sm-btn:active { color: var(--gold); transform: scale(0.9); }
+
+/* DICE */
+.dice-wrap { padding: 10px 12px 6px; border-top: 1px solid var(--border); }
+.dice-lbl { font-family: 'Cinzel', serif; font-size: 8px; color: var(--dim); letter-spacing: 2px; margin-bottom: 6px; }
+.dice-row { display: flex; gap: 5px; }
+.d-btn { flex: 1; padding: 7px 2px; background: var(--bg3); border: 1px solid var(--border); color: var(--dim); border-radius: 7px; cursor: pointer; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 1px; text-align: center; user-select: none; }
+.d-btn:active { background: rgba(201,168,76,0.1); border-color: var(--gold-dark); color: var(--gold); }
+.dice-result { margin-top: 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; text-align: center; font-family: 'Cinzel', serif; font-size: 11px; color: var(--dim); letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; }
+.dice-big { font-size: 20px; color: var(--gold); font-family: 'Cinzel Decorative', serif; }
+
+/* RESET */
+.reset-bar { display: flex; justify-content: center; padding: 10px 12px 14px; }
+.reset-bar button { padding: 9px 36px; background: var(--bg3); border: 1px solid rgba(231,76,60,0.2); color: #c0392b; border-radius: 8px; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px; cursor: pointer; }
+.reset-bar button:active { background: rgba(231,76,60,0.1); }
+
+/* LOG */
+.log-wrap { border-top: 1px solid var(--border); padding: 8px 12px 16px; }
+.log-lbl { font-family: 'Cinzel', serif; font-size: 8px; color: var(--dim); letter-spacing: 2px; margin-bottom: 5px; }
+.log-list { max-height: 90px; overflow-y: auto; }
+.log-entry { font-family: 'Crimson Pro', serif; font-size: 12px; color: var(--dim); padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+/* ── MANA TAB ── */
+.mana-page { padding: 12px; display: flex; flex-direction: column; gap: 14px; }
+
+.mana-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.mana-section-head { padding: 10px 14px 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.mana-section-title { font-family: 'Cinzel', serif; font-size: 11px; color: var(--gold); letter-spacing: 2px; }
+.mana-section-sub { font-family: 'Crimson Pro', serif; font-size: 12px; color: var(--dim); }
+
+.mana-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; padding: 10px 10px 12px; }
+.mana-pip { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.mana-sym { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; border: 2px solid rgba(255,255,255,0.1); }
+.mana-sym.W { background: var(--mW); color: var(--mWt); border-color: #c9a84c; }
+.mana-sym.U { background: var(--mU); color: var(--mUt); border-color: #4a90d9; }
+.mana-sym.B { background: var(--mB); color: var(--mBt); border-color: #9b59b6; }
+.mana-sym.R { background: var(--mR); color: var(--mRt); border-color: #e74c3c; }
+.mana-sym.G { background: var(--mG); color: var(--mGt); border-color: #27ae60; }
+.mana-sym.C { background: var(--mC); color: var(--mCt); border-color: #95a5a6; }
+.mana-count { font-family: 'Cinzel', serif; font-size: 16px; color: var(--text); }
+.mana-ctrls { display: flex; gap: 3px; }
+.mx-btn { width: 24px; height: 18px; background: var(--bg); border: 1px solid var(--border); color: var(--dim); border-radius: 3px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; user-select: none; }
+.mx-btn:active { color: var(--gold); transform: scale(0.88); }
+
+.avail-note { font-family: 'Crimson Pro', serif; font-size: 11px; color: var(--dim); padding: 0 12px 10px; text-align: center; }
+
+.mana-reset-btn { margin: 0 12px 12px; width: calc(100% - 24px); padding: 9px; background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.25); color: var(--gold); border-radius: 8px; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 1px; cursor: pointer; }
+.mana-reset-btn:active { background: rgba(201,168,76,0.15); }
+
+.total-row { display: flex; justify-content: center; gap: 20px; padding: 8px 12px; border-top: 1px solid var(--border); }
+.total-item { text-align: center; }
+.total-num { font-family: 'Cinzel', serif; font-size: 20px; color: var(--text); }
+.total-lbl { font-family: 'Cinzel', serif; font-size: 8px; color: var(--dim); letter-spacing: 1px; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="conn err" id="conn">⚡ CONNECTING...</div>
+
+<div class="hdr">
+  <h1>⚔ Commander ⚔</h1>
+  <div class="turn-row"><div class="dot"></div><span id="turnLbl">Turn 1</span></div>
+</div>
+
+<div class="whoami">
+  <label>I AM:</label>
+  <button id="wb0" class="on" onclick="setMe(0)">PLAYER 1</button>
+  <button id="wb1" onclick="setMe(1)">PLAYER 2</button>
+</div>
+
+<div class="turn-bar">
+  <button onclick="nextTurn()">⚔ NEXT TURN</button>
+</div>
+
+<div class="tabs">
+  <div class="tab on" onclick="switchTab('game')">⚔ GAME</div>
+  <div class="tab" onclick="switchTab('mana')">🔮 MANA</div>
+</div>
+
+<div id="page-game" class="page on">
+  <div class="players" id="players"></div>
+  <div class="dice-wrap">
+    <div class="dice-lbl">🎲 DICE ROLLER</div>
+    <div class="dice-row">
+      <button class="d-btn" onclick="roll(4)">d4</button>
+      <button class="d-btn" onclick="roll(6)">d6</button>
+      <button class="d-btn" onclick="roll(8)">d8</button>
+      <button class="d-btn" onclick="roll(10)">d10</button>
+      <button class="d-btn" onclick="roll(12)">d12</button>
+      <button class="d-btn" onclick="roll(20)">d20</button>
+      <button class="d-btn" onclick="roll(100)">d100</button>
+    </div>
+    <div class="dice-result" id="diceResult">Roll a die above</div>
+  </div>
+  <div class="reset-bar"><button onclick="resetGame()">↺ RESET GAME</button></div>
+  <div class="log-wrap">
+    <div class="log-lbl">📜 GAME LOG</div>
+    <div class="log-list" id="logList"></div>
+  </div>
+</div>
+
+<div id="page-mana" class="page">
+  <div class="mana-page" id="manaPage"></div>
+</div>
+
+<script>
+// ── CLIENT ID (cookie) ──
+function getClientId() {
+  const m = document.cookie.match(/mtg_client_id=([^;]+)/);
+  if (m) return m[1];
+  const id = 'c' + Math.random().toString(36).slice(2, 11);
+  document.cookie = `mtg_client_id=${id};path=/;max-age=31536000`;
+  return id;
+}
+const CLIENT_ID = getClientId();
+
+// ── STATE ──
+let state = null;
+let myPlayer = 0;
+let ws = null;
+let reconnTimer = null;
+let currentTab = 'game';
+
+// ── PLAYER ASSIGNMENT ──
+function setMe(id) {
+  myPlayer = id;
+  document.getElementById('wb0').classList.toggle('on', id === 0);
+  document.getElementById('wb1').classList.toggle('on', id === 1);
+  send({ type: 'CLAIM_PLAYER', clientId: CLIENT_ID, playerId: id });
+  render();
+}
+
+// ── TAB SWITCHING ──
+function switchTab(t) {
+  currentTab = t;
+  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('on', ['game','mana'][i] === t));
+  document.getElementById('page-game').classList.toggle('on', t === 'game');
+  document.getElementById('page-mana').classList.toggle('on', t === 'mana');
+}
+
+// ── WS ──
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}`);
+  ws.onopen = () => {
+    document.getElementById('conn').textContent = '✦ CONNECTED';
+    document.getElementById('conn').className = 'conn ok';
+    clearTimeout(reconnTimer);
+  };
+  ws.onclose = () => {
+    document.getElementById('conn').textContent = '⚡ DISCONNECTED — reconnecting...';
+    document.getElementById('conn').className = 'conn err';
+    reconnTimer = setTimeout(connect, 2000);
+  };
+  ws.onerror = () => ws.close();
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'STATE') {
+      state = msg.state;
+      // Server told us our assigned player from cookie
+      if (msg.assignedPlayer !== null && msg.assignedPlayer !== undefined) {
+        myPlayer = msg.assignedPlayer;
+        document.getElementById('wb0').classList.toggle('on', myPlayer === 0);
+        document.getElementById('wb1').classList.toggle('on', myPlayer === 1);
+      }
+      render();
+    }
+  };
+}
+
+function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
+
+// ── RENDER GAME TAB ──
+function render() {
+  if (!state) return;
+
+  const ap = state.players[state.activePlayer];
+  document.getElementById('turnLbl').textContent = `Turn ${state.turn} — ${ap.name}'s Turn`;
+
+  // Players
+  const grid = document.getElementById('players');
+  grid.innerHTML = '';
+  state.players.forEach((p, idx) => {
+    const other = idx === 0 ? 1 : 0;
+    const isActive = state.activePlayer === idx;
+    const isDead = p.life <= 0 || p.poison >= 10;
+    const lifeClass = p.life <= 5 ? 'danger' : p.life <= 10 ? 'warn' : '';
+    const cmdDmg = p.commanderDamage[other] || 0;
+    const tax = p.commandTax[0] || 0;
+
+    grid.innerHTML += `
+      <div class="card ${isActive ? 'active-turn' : ''} ${myPlayer === idx ? 'is-me' : ''}">
+        <div class="card-head">
+          <input value="${p.name}" ${myPlayer !== idx ? 'readonly' : ''}
+            onchange="send({type:'SET_NAME',playerId:${idx},name:this.value})"/>
+          ${isActive ? '<span class="badge turn">ACTIVE</span>' : ''}
+          ${isDead ? '<span class="badge dead">☠ FALLEN</span>' : ''}
+        </div>
+        <div class="life-row">
+          <button class="big-btn" onclick="send({type:'UPDATE_LIFE',playerId:${idx},delta:-1})">−</button>
+          <div class="life-mid">
+            <div class="life-num ${lifeClass}">${p.life}</div>
+            <div class="life-lbl">LIFE TOTAL</div>
+          </div>
+          <button class="big-btn" onclick="send({type:'UPDATE_LIFE',playerId:${idx},delta:1})">+</button>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-lbl">☠ POISON</div>
+            <div class="stat-val pois">${p.poison}/10</div>
+            <div class="stat-btns">
+              <button class="sm-btn" onclick="send({type:'UPDATE_POISON',playerId:${idx},delta:-1})">−</button>
+              <button class="sm-btn" onclick="send({type:'UPDATE_POISON',playerId:${idx},delta:1})">+</button>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="stat-lbl">⚔ CMD DMG</div>
+            <div class="stat-val cmd">${cmdDmg}/21</div>
+            <div class="stat-btns">
+              <button class="sm-btn" onclick="send({type:'UPDATE_COMMANDER_DAMAGE',targetId:${idx},sourceId:${other},delta:-1})">−</button>
+              <button class="sm-btn" onclick="send({type:'UPDATE_COMMANDER_DAMAGE',targetId:${idx},sourceId:${other},delta:1})">+</button>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="stat-lbl">💰 CMD TAX</div>
+            <div class="stat-val tax">{${tax * 2}}</div>
+            <div class="stat-btns">
+              <button class="sm-btn" onclick="send({type:'UPDATE_COMMAND_TAX',playerId:${idx},commanderIdx:0,delta:-1})">−</button>
+              <button class="sm-btn" onclick="send({type:'UPDATE_COMMAND_TAX',playerId:${idx},commanderIdx:0,delta:1})">+</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  });
+
+  // Dice
+  if (state.lastDiceRoll) {
+    const r = state.lastDiceRoll;
+    const rname = state.players[r.roller]?.name || `P${r.roller+1}`;
+    document.getElementById('diceResult').innerHTML =
+      `<span>${rname} d${r.sides}:</span><span class="dice-big">${r.result}</span>`;
+  }
+
+  // Log
+  document.getElementById('logList').innerHTML =
+    (state.log || []).map(e => `<div class="log-entry">${e}</div>`).join('');
+
+  // Mana tab
+  renderMana();
+}
+
+// ── RENDER MANA TAB ──
+const COLORS = ['W','U','B','R','G','C'];
+const COLOR_NAMES = { W:'Plains', U:'Islands', B:'Swamps', R:'Mountains', G:'Forests', C:'Other' };
+
+function renderMana() {
+  if (!state) return;
+  const p = state.players[myPlayer];
+  const lands = p.mana.lands;
+  const avail = p.mana.available;
+  const totalLands = COLORS.reduce((a,c) => a + (lands[c]||0), 0);
+  const totalAvail = COLORS.reduce((a,c) => a + (avail[c]||0), 0);
+  const isMyTurn = state.activePlayer === myPlayer;
+
+  document.getElementById('manaPage').innerHTML = `
+    <!-- LANDS -->
+    <div class="mana-section">
+      <div class="mana-section-head">
+        <div class="mana-section-title">LANDS IN PLAY</div>
+        <div class="mana-section-sub">${totalLands} total</div>
+      </div>
+      <div class="mana-grid">
+        ${COLORS.map(c => `
+          <div class="mana-pip">
+            <div class="mana-sym ${c}">${c === 'C' ? '◆' : c}</div>
+            <div class="mana-count">${lands[c]||0}</div>
+            <div class="mana-ctrls">
+              <button class="mx-btn" onclick="send({type:'UPDATE_LANDS',playerId:${myPlayer},color:'${c}',delta:-1})">−</button>
+              <button class="mx-btn" onclick="send({type:'UPDATE_LANDS',playerId:${myPlayer},color:'${c}',delta:1})">+</button>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="total-row">
+        ${COLORS.filter(c => (lands[c]||0) > 0).map(c =>
+          `<div class="total-item"><div class="total-num" style="color:var(--m${c}t,var(--text))">${lands[c]}</div><div class="total-lbl">${COLOR_NAMES[c].slice(0,3).toUpperCase()}</div></div>`
+        ).join('') || `<div style="font-family:'Crimson Pro',serif;font-size:13px;color:var(--dim)">No lands yet</div>`}
+      </div>
+    </div>
+
+    <!-- AVAILABLE MANA -->
+    <div class="mana-section">
+      <div class="mana-section-head">
+        <div class="mana-section-title">MANA AVAILABLE</div>
+        <div class="mana-section-sub">${totalAvail} remaining</div>
+      </div>
+      <div class="mana-grid">
+        ${COLORS.map(c => `
+          <div class="mana-pip">
+            <div class="mana-sym ${c}">${c === 'C' ? '◆' : c}</div>
+            <div class="mana-count">${avail[c]||0}</div>
+            <div class="mana-ctrls">
+              <button class="mx-btn" onclick="send({type:'UPDATE_AVAILABLE',playerId:${myPlayer},color:'${c}',delta:-1})">−</button>
+              <button class="mx-btn" onclick="send({type:'UPDATE_AVAILABLE',playerId:${myPlayer},color:'${c}',delta:1})">+</button>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="avail-note">${isMyTurn ? '✦ Your turn — spend mana below' : 'Resets automatically when your turn starts'}</div>
+      <button class="mana-reset-btn" onclick="send({type:'RESET_AVAILABLE',playerId:${myPlayer}})">↺ RESET TO LANDS</button>
+    </div>
+
+    <!-- OPPONENT SUMMARY -->
+    <div class="mana-section">
+      <div class="mana-section-head">
+        <div class="mana-section-title">${state.players[myPlayer===0?1:0].name}'s Lands</div>
+        <div class="mana-section-sub">read only</div>
+      </div>
+      <div class="mana-grid">
+        ${COLORS.map(c => {
+          const opp = state.players[myPlayer===0?1:0];
+          return `<div class="mana-pip">
+            <div class="mana-sym ${c}">${c==='C'?'◆':c}</div>
+            <div class="mana-count" style="color:var(--dim)">${opp.mana.lands[c]||0}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function roll(sides) { send({ type:'ROLL_DICE', sides, playerId: myPlayer }); }
+function nextTurn() { send({ type:'NEXT_TURN' }); }
+function resetGame() { if (confirm('Reset the entire game?')) send({ type:'RESET' }); }
+
+connect();
+</script>
+</body>
+</html>
